@@ -1,0 +1,14 @@
+.ai/
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+
+.idea/
+.vscode/
+
+node_modules/
+__pycache__/
+*.pyc
