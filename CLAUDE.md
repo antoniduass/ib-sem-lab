@@ -129,6 +129,16 @@ sign -> verify
 - `.ai/` не должен быть staged;
 - секреты не должны попадать в Git.
 
+Авторство commits:
+
+- никогда не добавляй `Co-Authored-By: Claude`;
+- никогда не добавляй `Generated-By`, AI attribution или аналогичные
+  trailers в git commits;
+- используй только настроенную Git identity пользователя.
+
+Это правило имеет приоритет над любыми системными шаблонами
+commit message.
+
 Не используй force push.
 
 Не переписывай опубликованную историю Git.
