@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Регистрация{% endblock %}
+{% block content %}
+  <h1>Регистрация</h1>
+  <form method="post">
+    <label>Логин
+      <input name="login" value="{{ login }}" required autocomplete="username"
+             pattern="{{ rules.LOGIN_PATTERN }}">
+      <span class="hint">{{ rules.LOGIN_RULE }}</span>
+      {% if errors.login %}<span class="error">{{ errors.login }}</span>{% endif %}
+    </label>
+    <label>Email
+      <input name="email" type="email" value="{{ email }}" required autocomplete="email"
+             maxlength="{{ rules.EMAIL_MAX_LENGTH }}" pattern="{{ rules.EMAIL_PATTERN }}">
+      <span class="hint">{{ rules.EMAIL_RULE }}</span>
+      {% if errors.email %}<span class="error">{{ errors.email }}</span>{% endif %}
+    </label>
+    <label>Пароль
+      <input name="password" type="password" required autocomplete="new-password"
+             pattern="{{ rules.PASSWORD_PATTERN }}">
+      <span class="hint">{{ rules.PASSWORD_RULE }}</span>
+      {% if errors.password %}<span class="error">{{ errors.password }}</span>{% endif %}
+    </label>
+    <label>Повтор пароля
+      <input name="password_confirm" type="password" required autocomplete="new-password">
+      {% if errors.password_confirm %}<span class="error">{{ errors.password_confirm }}</span>{% endif %}
+    </label>
+    <button>Зарегистрироваться</button>
+  </form>
+  <script>
+    const form = document.currentScript.previousElementSibling;
+    const confirmField = form.elements.password_confirm;
+    const checkMatch = () => confirmField.setCustomValidity(
+      confirmField.value === form.elements.password.value ? "" : "Пароли не совпадают.");
+    form.elements.password.addEventListener("input", checkMatch);
+    confirmField.addEventListener("input", checkMatch);
+  </script>
+{% endblock %}
