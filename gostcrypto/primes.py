@@ -2,6 +2,8 @@
 
 import secrets
 
+from gostcrypto.modular import mod_pow
+
 MILLER_RABIN_ROUNDS = 40
 
 SMALL_PRIMES = tuple(
@@ -12,7 +14,7 @@ SMALL_PRIMES = tuple(
 def is_strong_probable_prime(n: int, base: int) -> bool:
     s = ((n - 1) & -(n - 1)).bit_length() - 1
     d = (n - 1) >> s
-    x = pow(base, d, n)
+    x = mod_pow(base, d, n)
     if x in (1, n - 1):
         return True
     for _ in range(s - 1):
