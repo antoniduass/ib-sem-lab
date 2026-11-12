@@ -4,6 +4,7 @@ from gostcrypto.streebog import (
     compress,
     l_transform,
     lps,
+    lps_reference,
     p_transform,
     round_keys,
     s_transform,
@@ -188,3 +189,11 @@ def test_block_boundaries(data, expected):
 
 def test_digest_is_64_bytes():
     assert len(streebog512(b"x")) == 64
+
+
+def test_table_lps_matches_reference_transforms():
+    values = [0, (1 << 512) - 1, 1, 1 << 511] + [
+        int.from_bytes(bytes(range(i, i + 64)), "little") for i in range(0, 192, 7)
+    ]
+    for value in values:
+        assert lps(value) == lps_reference(value)

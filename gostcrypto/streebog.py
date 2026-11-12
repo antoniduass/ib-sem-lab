@@ -147,8 +147,26 @@ def l_transform(a: int) -> int:
     return result
 
 
-def lps(a: int) -> int:
+def lps_reference(a: int) -> int:
     return l_transform(p_transform(s_transform(a)))
+
+
+# L is linear, so L(P(S(a))) is the XOR of per-byte contributions:
+# LPS_TABLES[b][v] = l(PI[v] placed in byte b of a 64-bit word).
+LPS_TABLES = tuple(
+    tuple(linear_l(PI[v] << (8 * b)) for v in range(256)) for b in range(8)
+)
+
+
+def lps(a: int) -> int:
+    source = a.to_bytes(64, "little")
+    result = bytearray()
+    for word in range(8):
+        value = 0
+        for b in range(8):
+            value ^= LPS_TABLES[b][source[TAU[8 * word + b]]]
+        result += value.to_bytes(8, "little")
+    return int.from_bytes(result, "little")
 
 
 def round_keys(k: int) -> list[int]:
