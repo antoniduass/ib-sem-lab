@@ -13,11 +13,30 @@
     input:user-invalid { border-color: #cf222e; }
     .hint { font-weight: 400; font-size: .875rem; color: #59636e; }
     .error { font-weight: 400; font-size: .875rem; color: #cf222e; }
+    form.inline { display: inline; }
+    button.link { background: none; color: #0b5cad; padding: 0; text-decoration: underline; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: .4rem; border-bottom: 1px solid #d1d9e0; }
     button { font: inherit; padding: .6rem 1rem; border: 0; border-radius: 6px; background: #1f6feb; color: #fff; cursor: pointer; }
   </style>
 </head>
 <body>
-  <header><a href="{{ url_for('index') }}">Защищённый блокнот</a></header>
+  <header>
+    <nav>
+      <a href="{{ url_for('index') }}">Защищённый блокнот</a>
+      {% if g.user %}
+        · <a href="{{ url_for('auth.account') }}">{{ g.user.login }}</a>
+        {% if g.user.role == "admin" %}· <a href="{{ url_for('auth.admin') }}">Администрирование</a>{% endif %}
+        <form class="inline" method="post" action="{{ url_for('auth.logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="link">Выйти</button>
+        </form>
+      {% else %}
+        · <a href="{{ url_for('auth.login') }}">Вход</a>
+        · <a href="{{ url_for('auth.register') }}">Регистрация</a>
+      {% endif %}
+    </nav>
+  </header>
   <main>{% block content %}{% endblock %}</main>
 </body>
 </html>

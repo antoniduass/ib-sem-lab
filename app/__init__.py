@@ -21,6 +21,7 @@ def create_app(config: dict | None = None) -> Flask:
     app.before_request(check_csrf)
     app.jinja_env.globals["csrf_token"] = csrf_token
     app.register_blueprint(auth.bp)
+    app.cli.add_command(auth.set_role_command)
 
     @app.get("/")
     def index():

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Администрирование{% endblock %}
+{% block content %}
+  <h1>Администрирование</h1>
+  <table>
+    <tr><th>Логин</th><th>Email</th><th>Роль</th></tr>
+    {% for login, email, role in users %}
+      <tr><td>{{ login }}</td><td>{{ email }}</td><td>{{ role }}</td></tr>
+    {% endfor %}
+  </table>
+{% endblock %}

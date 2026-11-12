@@ -13,3 +13,10 @@ def derive_password_hash(password: str, salt: bytes, iterations: int) -> bytes:
 def hash_password(password: str, iterations: int) -> tuple[bytes, bytes]:
     salt = secrets.token_bytes(SALT_BYTES)
     return salt, derive_password_hash(password, salt, iterations)
+
+
+def verify_password(
+    password: str, salt: bytes, iterations: int, expected_hash: bytes
+) -> bool:
+    actual = derive_password_hash(password, salt, iterations)
+    return secrets.compare_digest(actual, expected_hash)
