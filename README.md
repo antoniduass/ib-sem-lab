@@ -17,8 +17,9 @@
 | ЭЦП на эллиптической кривой (512 бит, `paramSetA`) | ГОСТ 34.10-2018, RFC 7836 | ✅ готово, контрольные примеры ГОСТа и RFC |
 | RSA-32768 с дополнением PKCS#1 v1.5 | RFC 8017 | ✅ готово, совместимость с OpenSSL |
 | Режим гаммирования (CTR) для Кузнечика | ГОСТ 34.13-2018 | ✅ готово, контрольный пример ГОСТа |
-| Хранение паролей: PBKDF2 на Стрибоге | RFC 7836, RFC 9337 | в планах |
-| Регистрация, вход в три фактора, роли | — | в планах |
+| HMAC и PBKDF2 на Стрибоге-512 | RFC 7836, RFC 9337 | ✅ готово, контрольные примеры RFC |
+| Регистрация: проверка полей регулярками, пароль — соль + PBKDF2 | — | ✅ готово |
+| Вход в три фактора, роли | — | в планах |
 | Почта на localhost, восстановление пароля, коды | — | в планах |
 | Сообщения, PDF с подписью, администрирование | — | в планах |
 
@@ -44,7 +45,22 @@ uv sync
 cp .env.example .env
 ```
 
-В `.env` укажите строку подключения к PostgreSQL в `DATABASE_URL`.
+### База данных
+
+Проект использует собственный кластер PostgreSQL в `instance/pgdata` (порт 5433,
+только localhost, без пароля) — так он не зависит от других установок PostgreSQL:
+
+```bash
+initdb -D instance/pgdata -U ib --auth-local=trust --auth-host=trust -E UTF8 --locale=C
+pg_ctl -D instance/pgdata -o "-p 5433 -c listen_addresses=localhost" -l instance/postgres.log start
+createdb -h localhost -p 5433 -U ib ib
+createdb -h localhost -p 5433 -U ib ib_test
+set -a; source .env; set +a
+uv run flask --app app init-db
+```
+
+Остановить кластер: `pg_ctl -D instance/pgdata stop`. База `ib_test` нужна тестам
+(адрес — `TEST_DATABASE_URL`), тесты очищают её таблицы.
 
 ## Запуск
 
@@ -53,7 +69,12 @@ set -a; source .env; set +a
 uv run flask --app app run
 ```
 
-Проверка: `http://127.0.0.1:5000/health` возвращает `{"status": "ok"}`.
+Проверка: `http://127.0.0.1:5000/health` возвращает `{"status": "ok"}`,
+регистрация — `http://127.0.0.1:5000/register`.
+
+Пароль хранится как PBKDF2-HMAC-Стрибог-512 (RFC 9337): случайная соль 16 байт,
+1000 итераций, хэш 64 байта. Регистрация занимает около 1,3 с — это цена итераций
+на самописном Стрибоге.
 
 ## Ключ RSA-32768
 
