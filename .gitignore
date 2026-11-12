@@ -13,3 +13,6 @@ node_modules/
 __pycache__/
 *.pyc
 .venv/
+
+# local data: RSA keys and other secrets
+instance/
