@@ -1,4 +1,5 @@
 import os
+import re
 
 import pytest
 
@@ -17,7 +18,7 @@ def app():
     )
     with app.app_context():
         init_db()
-        get_db().execute("TRUNCATE users RESTART IDENTITY")
+        get_db().execute("TRUNCATE users, sessions RESTART IDENTITY")
     return app
 
 
@@ -31,5 +32,15 @@ def query(app):
     def run(sql, params=()):
         with app.app_context():
             return get_db().execute(sql, params).fetchall()
+
+    return run
+
+
+@pytest.fixture
+def submit(client):
+    def run(url, data, form_url=None):
+        page = client.get(form_url or url).get_data(as_text=True)
+        token = re.search(r'name="csrf_token" value="([^"]+)"', page).group(1)
+        return client.post(url, data={**data, "csrf_token": token})
 
     return run

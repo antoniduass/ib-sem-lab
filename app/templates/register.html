@@ -3,6 +3,7 @@
 {% block content %}
   <h1>Регистрация</h1>
   <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Логин
       <input name="login" value="{{ login }}" required autocomplete="username"
              pattern="{{ rules.LOGIN_PATTERN }}">

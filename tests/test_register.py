@@ -21,8 +21,8 @@ def test_form_uses_server_patterns_on_client(client):
         assert f'pattern="{pattern}"' in page
 
 
-def test_registration_stores_salted_hash_only(client, query, app):
-    response = client.post("/register", data=form())
+def test_registration_stores_salted_hash_only(submit, query, app):
+    response = submit("/register", data=form())
     assert response.status_code == 302
     assert response.headers["Location"].endswith("/register/done")
     [(login, email, salt, iterations, password_hash, role)] = query(
@@ -39,37 +39,33 @@ def test_registration_stores_salted_hash_only(client, query, app):
     assert PASSWORD.encode() not in stored
 
 
-def test_same_password_gives_different_salt_and_hash(client, query):
-    client.post("/register", data=form())
-    client.post("/register", data=form(login="second", email="second@example.com"))
+def test_same_password_gives_different_salt_and_hash(submit, query):
+    submit("/register", data=form())
+    submit("/register", data=form(login="second", email="second@example.com"))
     (salt1, hash1), (salt2, hash2) = query(
         "SELECT password_salt, password_hash FROM users"
     )
     assert salt1 != salt2 and hash1 != hash2
 
 
-def test_duplicate_login_is_rejected_case_insensitively(client, query):
-    client.post("/register", data=form())
-    response = client.post(
-        "/register", data=form(login="ANTON", email="other@example.com")
-    )
+def test_duplicate_login_is_rejected_case_insensitively(submit, query):
+    submit("/register", data=form())
+    response = submit("/register", data=form(login="ANTON", email="other@example.com"))
     assert response.status_code == 400
     assert "Этот логин уже занят." in response.get_data(as_text=True)
     assert len(query("SELECT id FROM users")) == 1
 
 
-def test_duplicate_email_is_rejected_case_insensitively(client, query):
-    client.post("/register", data=form())
-    response = client.post(
-        "/register", data=form(login="other", email="Anton@Example.com")
-    )
+def test_duplicate_email_is_rejected_case_insensitively(submit, query):
+    submit("/register", data=form())
+    response = submit("/register", data=form(login="other", email="Anton@Example.com"))
     assert response.status_code == 400
     assert "Этот email уже зарегистрирован." in response.get_data(as_text=True)
     assert len(query("SELECT id FROM users")) == 1
 
 
-def test_invalid_form_is_rejected_without_storing(client, query):
-    response = client.post(
+def test_invalid_form_is_rejected_without_storing(submit, query):
+    response = submit(
         "/register",
         data=form(login="1bad", email="bad", password="weak", confirm="weak"),
     )
@@ -80,8 +76,8 @@ def test_invalid_form_is_rejected_without_storing(client, query):
     assert "weak" not in page.replace('value="1bad"', "")
 
 
-def test_password_mismatch_is_rejected(client, query):
-    response = client.post("/register", data=form(confirm=PASSWORD + "x"))
+def test_password_mismatch_is_rejected(submit, query):
+    response = submit("/register", data=form(confirm=PASSWORD + "x"))
     assert response.status_code == 400
     assert "Пароли не совпадают." in response.get_data(as_text=True)
     assert query("SELECT id FROM users") == []

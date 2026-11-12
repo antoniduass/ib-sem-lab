@@ -11,3 +11,9 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE UNIQUE INDEX IF NOT EXISTS users_login_key ON users (lower(login));
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_key ON users (lower(email));
+
+CREATE TABLE IF NOT EXISTS sessions (
+    token_hash bytea PRIMARY KEY,
+    data jsonb NOT NULL,
+    expires_at timestamptz NOT NULL
+);
