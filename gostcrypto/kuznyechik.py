@@ -93,8 +93,11 @@ def round_keys(key: bytes) -> list[bytes]:
 
 
 def encrypt_block(key: bytes, block: bytes) -> bytes:
+    return encrypt_with_round_keys(round_keys(key), block)
+
+
+def encrypt_with_round_keys(keys: list[bytes], block: bytes) -> bytes:
     require_length(block, BLOCK_BYTES, "block")
-    keys = round_keys(key)
     for k in keys[:-1]:
         block = lsx(k, block)
     return x_transform(keys[-1], block)
