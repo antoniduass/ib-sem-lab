@@ -2,7 +2,7 @@ import os
 
 from flask import Flask, render_template
 
-from app import admin, auth, db, messages, reset
+from app import admin, auth, db, demo, messages, reset
 from app.csrf import check_csrf, csrf_token
 from app.sessions import PostgresSessionInterface
 
@@ -20,6 +20,9 @@ def create_app(config: dict | None = None) -> Flask:
     app.config["MAX_CONTENT_LENGTH"] = 64 * 1024
     app.config["MASTER_KEY_PATH"] = os.path.join(app.instance_path, "master_key.bin")
     app.config["RSA_KEY_PATH"] = os.path.join(app.instance_path, "rsa_private_key.json")
+    app.config["RSA_DEMO_KEY_PATH"] = os.path.join(
+        app.instance_path, "rsa_demo_2048.json"
+    )
     app.config.update(config or {})
 
     db.init_app(app)
@@ -30,6 +33,7 @@ def create_app(config: dict | None = None) -> Flask:
     app.register_blueprint(reset.bp)
     app.register_blueprint(messages.bp)
     app.register_blueprint(admin.bp)
+    app.register_blueprint(demo.bp)
     app.cli.add_command(auth.set_role_command)
 
     @app.get("/")

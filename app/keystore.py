@@ -9,7 +9,14 @@ from flask import current_app
 
 from gostcrypto.ctr import IV_BYTES, ctr_decrypt, ctr_encrypt
 from gostcrypto.kuznyechik import KEY_BYTES
-from gostcrypto.rsa import PrivateKey, load_private_key
+from gostcrypto.rsa import (
+    PrivateKey,
+    generate_keypair,
+    load_private_key,
+    save_private_key,
+)
+
+DEMO_RSA_BITS = 2048
 
 
 def master_key() -> bytes:
@@ -38,3 +45,13 @@ def system_rsa_key() -> PrivateKey:
     if configured is not None:
         return configured
     return load_private_key(current_app.config["RSA_KEY_PATH"])
+
+
+def demo_rsa_key() -> PrivateKey:
+    configured = current_app.config.get("RSA_DEMO_KEY")
+    if configured is not None:
+        return configured
+    path = current_app.config["RSA_DEMO_KEY_PATH"]
+    if not os.path.exists(path):
+        save_private_key(generate_keypair(DEMO_RSA_BITS), path)
+    return load_private_key(path)

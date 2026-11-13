@@ -27,6 +27,7 @@
   <header>
     <nav>
       <a href="{{ url_for('index') }}">Защищённый блокнот</a>
+      · <a href="{{ url_for('demo.demo') }}">Демо шифров</a>
       {% if g.user %}
         · <a href="{{ url_for('messages.list_messages') }}">Сообщения</a>
         · <a href="{{ url_for('auth.account') }}">{{ g.user.login }}</a>

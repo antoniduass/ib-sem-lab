@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Демонстрация шифров{% endblock %}
+{% block content %}
+  <h1>Демонстрация шифров</h1>
+  <p>Каждый алгоритм можно проверить отдельно. Поля заполнены контрольными примерами
+    из стандартов — результат совпадает с ними.</p>
+  {% if error %}<p class="error" id="demo-error">{{ error }}</p>{% endif %}
+
+  <h2>Стрибог-512 (ГОСТ 34.11-2018)</h2>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="streebog">
+    <label>Сообщение (UTF-8)
+      <textarea name="text">{{ form.text }}</textarea>
+      <span class="hint">По умолчанию — сообщение M1 из приложения А.</span>
+    </label>
+    <button>Вычислить хэш</button>
+  </form>
+  {% if results.streebog %}
+    <p>Хэш в записи ГОСТа (старший байт слева):</p>
+    <pre id="streebog-standard">{{ results.streebog.standard }}</pre>
+    <p>Те же байты в порядке хранения (как в OpenSSL):</p>
+    <pre>{{ results.streebog.bytes }}</pre>
+  {% endif %}
+
+  <h2>Кузнечик, режим гаммирования (ГОСТ 34.12-2018, ГОСТ 34.13-2018)</h2>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="kuznyechik">
+    <label>Ключ (32 байта, hex) <input name="key" value="{{ form.key }}"></label>
+    <label>Синхропосылка (8 байт, hex) <input name="iv" value="{{ form.iv }}"></label>
+    <label>Открытый текст (hex) <textarea name="plaintext">{{ form.plaintext }}</textarea>
+      <span class="hint">По умолчанию — пример А.2.3 ГОСТ 34.13 (таблица А.2).</span>
+    </label>
+    <button>Зашифровать</button>
+  </form>
+  {% if results.kuznyechik %}
+    <p>Шифртекст:</p>
+    <pre id="kuznyechik-ciphertext">{{ results.kuznyechik.ciphertext }}</pre>
+    <p>Расшифровано обратно:</p>
+    <pre>{{ results.kuznyechik.decrypted }}</pre>
+  {% endif %}
+
+  <h2>RSA, дополнение PKCS#1 v1.5</h2>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="rsa">
+    <label>Сообщение <input name="rsa_text" value="{{ form.rsa_text }}"></label>
+    <fieldset>
+      <legend>Ключ</legend>
+      {% for value, name in rsa_keys.items() %}
+        <label class="hint"><span><input type="radio" name="rsa_key" value="{{ value }}"
+          {% if value == form.rsa_key %}checked{% endif %}> {{ name }}</span></label>
+      {% endfor %}
+      <span class="hint">Расшифровка системным ключом 32768 бит занимает около 30 секунд.</span>
+    </fieldset>
+    <button>Зашифровать и расшифровать</button>
+  </form>
+  {% if results.rsa %}
+    <p>Модуль: {{ results.rsa.modulus_bits }} бит. Шифрование — {{ "%.2f"|format(results.rsa.encrypt_seconds) }} с,
+      расшифровка — {{ "%.2f"|format(results.rsa.decrypt_seconds) }} с.</p>
+    <p>Шифртекст:</p>
+    <pre>{{ results.rsa.ciphertext }}</pre>
+    <p>Расшифровано обратно:</p>
+    <pre id="rsa-decrypted">{{ results.rsa.decrypted }}</pre>
+  {% endif %}
+{% endblock %}

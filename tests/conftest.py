@@ -29,6 +29,7 @@ def app(test_rsa_key):
             "PASSWORD_ITERATIONS": 3,
             "MASTER_KEY": bytes(range(32)),
             "RSA_KEY": test_rsa_key,
+            "RSA_DEMO_KEY": test_rsa_key,
         }
     )
     with app.app_context():
