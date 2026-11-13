@@ -7,6 +7,7 @@ import pytest
 
 from app import create_app
 from app.db import get_db, init_db
+from gostcrypto.rsa import generate_keypair
 
 PASSWORD = "Str0ng!Passw0rd"
 TEST_DATABASE_URL = os.environ.get(
@@ -14,10 +15,21 @@ TEST_DATABASE_URL = os.environ.get(
 )
 
 
+@pytest.fixture(scope="session")
+def test_rsa_key():
+    return generate_keypair(768)
+
+
 @pytest.fixture
-def app():
+def app(test_rsa_key):
     app = create_app(
-        {"TESTING": True, "DATABASE_URL": TEST_DATABASE_URL, "PASSWORD_ITERATIONS": 3}
+        {
+            "TESTING": True,
+            "DATABASE_URL": TEST_DATABASE_URL,
+            "PASSWORD_ITERATIONS": 3,
+            "MASTER_KEY": bytes(range(32)),
+            "RSA_KEY": test_rsa_key,
+        }
     )
     with app.app_context():
         init_db()

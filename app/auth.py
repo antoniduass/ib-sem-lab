@@ -22,6 +22,7 @@ from psycopg.rows import namedtuple_row
 from app import mail, validation
 from app.codes import consume_code, issue_code
 from app.db import get_db
+from app.keystore import wrap
 from app.passwords import SALT_BYTES, hash_password, verify_password
 from app.recovery import (
     consume_recovery_code,
@@ -114,6 +115,10 @@ def register():
     ), (400 if errors else 200)
 
 
+def wrap_signing_key(signing_key: int) -> bytes:
+    return wrap(signing_key.to_bytes(64, "big"))
+
+
 def key_file_base64(login: str, signing_key: int) -> str:
     return base64.b64encode(key_file(login, signing_key)).decode()
 
@@ -129,8 +134,8 @@ def create_user(
             get_db()
             .execute(
                 "INSERT INTO users (login, email, password_salt, password_iterations,"
-                " password_hash, signing_public_key) VALUES (%s, %s, %s, %s, %s, %s)"
-                " RETURNING id",
+                " password_hash, signing_public_key, signing_key_encrypted)"
+                " VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id",
                 (
                     login,
                     email,
@@ -138,6 +143,7 @@ def create_user(
                     iterations,
                     password_hash,
                     encode_public_key(public_key),
+                    wrap_signing_key(signing_key),
                 ),
             )
             .fetchone()
@@ -325,8 +331,9 @@ def new_recovery_codes():
 def new_signing_key():
     signing_key, public_key = generate_keys(PARAMSET_512_A)
     get_db().execute(
-        "UPDATE users SET signing_public_key = %s WHERE id = %s",
-        (encode_public_key(public_key), g.user.id),
+        "UPDATE users SET signing_public_key = %s, signing_key_encrypted = %s"
+        " WHERE id = %s",
+        (encode_public_key(public_key), wrap_signing_key(signing_key), g.user.id),
     )
     return render_template(
         "signing_key.html", key_file_base64=key_file_base64(g.user.login, signing_key)

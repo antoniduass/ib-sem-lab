@@ -18,6 +18,8 @@ def create_app(config: dict | None = None) -> Flask:
     app.config["MAIL_PORT"] = int(os.environ.get("MAIL_PORT", "1025"))
     app.config["MAIL_SENDER"] = "noreply@ib.local"
     app.config["MAX_CONTENT_LENGTH"] = 64 * 1024
+    app.config["MASTER_KEY_PATH"] = os.path.join(app.instance_path, "master_key.bin")
+    app.config["RSA_KEY_PATH"] = os.path.join(app.instance_path, "rsa_private_key.json")
     app.config.update(config or {})
 
     db.init_app(app)

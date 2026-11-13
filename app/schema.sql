@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_iterations integer NOT NULL,
     password_hash bytea NOT NULL,
     signing_public_key bytea NOT NULL,
+    signing_key_encrypted bytea NOT NULL,
     role text NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
     created_at timestamptz NOT NULL DEFAULT now()
 );
