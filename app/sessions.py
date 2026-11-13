@@ -82,3 +82,10 @@ class PostgresSessionInterface(SessionInterface):
             samesite="Lax",
             secure=app.config["SESSION_COOKIE_SECURE"],
         )
+
+
+def end_user_sessions(user_id: int) -> None:
+    get_db().execute(
+        "DELETE FROM sessions WHERE data->>'user_id' = %s OR data->>'pending_user_id' = %s",
+        (str(user_id), str(user_id)),
+    )

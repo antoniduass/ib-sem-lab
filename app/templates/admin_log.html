@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Журнал входов{% endblock %}
+{% block content %}
+  <h1>Журнал входов</h1>
+  <p><a href="{{ url_for('admin.users') }}">К пользователям</a></p>
+  {% if events %}
+    <table>
+      <tr><th>Время (UTC)</th><th>Логин</th><th>Событие</th><th>IP</th></tr>
+      {% for created_at, login, event, ip_address in events %}
+        <tr>
+          <td>{{ created_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+          <td>{{ login }}</td>
+          <td>{{ event_names.get(event, event) }}</td>
+          <td>{{ ip_address or "" }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>Событий пока нет.</p>
+  {% endif %}
+{% endblock %}

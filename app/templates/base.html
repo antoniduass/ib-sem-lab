@@ -30,7 +30,7 @@
       {% if g.user %}
         · <a href="{{ url_for('messages.list_messages') }}">Сообщения</a>
         · <a href="{{ url_for('auth.account') }}">{{ g.user.login }}</a>
-        {% if g.user.role == "admin" %}· <a href="{{ url_for('auth.admin') }}">Администрирование</a>{% endif %}
+        {% if g.user.role == "admin" %}· <a href="{{ url_for('admin.users') }}">Администрирование</a>{% endif %}
         <form class="inline" method="post" action="{{ url_for('auth.logout') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button class="link">Выйти</button>

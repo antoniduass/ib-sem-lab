@@ -45,6 +45,7 @@ DUPLICATE_ERRORS = {
     "users_email_key": ("email", "Этот email уже зарегистрирован."),
 }
 LOGIN_FAILED = "Неверный логин или пароль."
+ACCOUNT_BLOCKED = "Учётная запись заблокирована администратором."
 MAX_ATTEMPTS = 5
 TOO_MANY_ATTEMPTS = "Слишком много неудачных попыток. Войдите заново."
 KEY_REJECTED = "Файл ключа не подходит."
@@ -62,9 +63,22 @@ def load_user() -> None:
         g.user = (
             get_db()
             .cursor(row_factory=namedtuple_row)
-            .execute("SELECT id, login, role FROM users WHERE id = %s", (user_id,))
+            .execute(
+                "SELECT id, login, role FROM users WHERE id = %s AND NOT is_blocked",
+                (user_id,),
+            )
             .fetchone()
         )
+        if g.user is None:
+            session.clear()
+
+
+def log_login_event(user_id: int | None, login: str | None, event: str) -> None:
+    get_db().execute(
+        "INSERT INTO login_events (user_id, login, event, ip_address) VALUES"
+        " (%s, COALESCE(%s, (SELECT login FROM users WHERE id = %s)), %s, %s)",
+        (user_id, login, user_id, event, request.remote_addr),
+    )
 
 
 def login_required(view):
@@ -161,7 +175,11 @@ def login():
     if request.method == "POST":
         user_id = authenticate(login, request.form.get("password", ""))
         if user_id is None:
+            log_login_event(None, login, "password_failed")
             error = LOGIN_FAILED
+        elif is_blocked(user_id):
+            log_login_event(user_id, None, "blocked")
+            error = ACCOUNT_BLOCKED
         else:
             session.clear()
             session.regenerate()
@@ -173,6 +191,15 @@ def login():
     return render_template("login.html", login=login, error=error), (
         400 if error else 200
     )
+
+
+def is_blocked(user_id: int) -> bool:
+    (blocked,) = (
+        get_db()
+        .execute("SELECT is_blocked FROM users WHERE id = %s", (user_id,))
+        .fetchone()
+    )
+    return blocked
 
 
 def send_login_code(user_id: int) -> None:
@@ -221,6 +248,7 @@ def login_code():
             session["challenge"] = secrets.token_hex(32)
             return redirect(url_for("auth.login_key"))
         error = "Неверный или просроченный код."
+        log_login_event(session["pending_user_id"], None, "code_failed")
         if (restart := count_failed_attempt()) is not None:
             return restart
     return render_template("login_code.html", error=error), (400 if error else 200)
@@ -251,10 +279,12 @@ def login_key():
             session.clear()
             session.regenerate()
             session["user_id"] = user_id
+            log_login_event(user_id, None, "success")
             if recovery_code:
                 flash(KEY_REISSUE_HINT)
             return redirect(url_for("auth.account"))
         error = "Код восстановления не подходит." if recovery_code else KEY_REJECTED
+        log_login_event(session["pending_user_id"], None, "key_failed")
         if (restart := count_failed_attempt()) is not None:
             return restart
     return render_template(
@@ -338,15 +368,6 @@ def new_signing_key():
     return render_template(
         "signing_key.html", key_file_base64=key_file_base64(g.user.login, signing_key)
     )
-
-
-@bp.get("/admin")
-@role_required("admin")
-def admin():
-    users = (
-        get_db().execute("SELECT login, email, role FROM users ORDER BY id").fetchall()
-    )
-    return render_template("admin.html", users=users)
 
 
 @click.command("set-role")

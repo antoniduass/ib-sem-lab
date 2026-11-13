@@ -2,7 +2,7 @@ import os
 
 from flask import Flask, render_template
 
-from app import auth, db, messages, reset
+from app import admin, auth, db, messages, reset
 from app.csrf import check_csrf, csrf_token
 from app.sessions import PostgresSessionInterface
 
@@ -29,6 +29,7 @@ def create_app(config: dict | None = None) -> Flask:
     app.register_blueprint(auth.bp)
     app.register_blueprint(reset.bp)
     app.register_blueprint(messages.bp)
+    app.register_blueprint(admin.bp)
     app.cli.add_command(auth.set_role_command)
 
     @app.get("/")

@@ -2,10 +2,35 @@
 {% block title %}Администрирование{% endblock %}
 {% block content %}
   <h1>Администрирование</h1>
+  <p><a href="{{ url_for('admin.login_log') }}">Журнал входов</a></p>
   <table>
-    <tr><th>Логин</th><th>Email</th><th>Роль</th></tr>
-    {% for login, email, role in users %}
-      <tr><td>{{ login }}</td><td>{{ email }}</td><td>{{ role }}</td></tr>
+    <tr><th>Логин</th><th>Email</th><th>Роль</th><th>Статус</th></tr>
+    {% for user_id, login, email, role, is_blocked in users %}
+      <tr>
+        <td>{{ login }}</td>
+        <td>{{ email }}</td>
+        <td>
+          {% if user_id == g.user.id %}{{ role }} (вы){% else %}
+            <form class="inline" method="post" action="{{ url_for('admin.change_role', user_id=user_id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <select name="role" aria-label="Роль {{ login }}">
+                {% for option in roles %}<option value="{{ option }}" {% if option == role %}selected{% endif %}>{{ option }}</option>{% endfor %}
+              </select>
+              <button class="link">Сохранить</button>
+            </form>
+          {% endif %}
+        </td>
+        <td>
+          {% if is_blocked %}заблокирован{% else %}активен{% endif %}
+          {% if user_id != g.user.id %}
+            <form class="inline" method="post"
+                  action="{{ url_for('admin.unblock' if is_blocked else 'admin.block', user_id=user_id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="link">{{ "Разблокировать" if is_blocked else "Заблокировать" }}</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
     {% endfor %}
   </table>
 {% endblock %}

@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     signing_public_key bytea NOT NULL,
     signing_key_encrypted bytea NOT NULL,
     role text NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+    is_blocked boolean NOT NULL DEFAULT false,
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -43,5 +44,14 @@ CREATE TABLE IF NOT EXISTS messages (
     wrapped_key bytea,
     signature bytea NOT NULL,
     signer_public_key bytea NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS login_events (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id bigint REFERENCES users (id) ON DELETE SET NULL,
+    login text NOT NULL,
+    event text NOT NULL,
+    ip_address text,
     created_at timestamptz NOT NULL DEFAULT now()
 );

@@ -14,6 +14,7 @@ from app.codes import consume_code, issue_code
 from app.db import get_db
 from app.passwords import hash_password
 from app.recovery import consume_recovery_code, looks_like_recovery_code
+from app.sessions import end_user_sessions
 
 bp = Blueprint("reset", __name__)
 
@@ -96,8 +97,4 @@ def change_password(user_id: int, password: str) -> None:
             " password_hash = %s WHERE id = %s",
             (salt, iterations, password_hash, user_id),
         )
-        db.execute(
-            "DELETE FROM sessions WHERE data->>'user_id' = %s"
-            " OR data->>'pending_user_id' = %s",
-            (str(user_id), str(user_id)),
-        )
+        end_user_sessions(user_id)
