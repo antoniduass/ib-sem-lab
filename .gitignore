@@ -16,3 +16,9 @@ __pycache__/
 
 # local data: RSA keys and other secrets
 instance/
+
+# personal files: kept locally, not published
+CLAUDE.md
+TODO.md
+PROJECT_MAP.md
+DEMO_SCENARIO.md
