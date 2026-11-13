@@ -2,33 +2,7 @@ import pytest
 
 from app.db import get_db
 from app.sessions import COOKIE_NAME, token_hash
-
-PASSWORD = "Str0ng!Passw0rd"
-
-
-@pytest.fixture
-def register(submit):
-    def run(login="anton", email=None, password=PASSWORD):
-        response = submit(
-            "/register",
-            {
-                "login": login,
-                "email": email or f"{login}@example.com",
-                "password": password,
-                "password_confirm": password,
-            },
-        )
-        assert response.status_code == 302
-
-    return run
-
-
-@pytest.fixture
-def log_in(submit):
-    def run(login="anton", password=PASSWORD):
-        return submit("/login", {"login": login, "password": password})
-
-    return run
+from tests.conftest import PASSWORD
 
 
 def session_cookie(client):

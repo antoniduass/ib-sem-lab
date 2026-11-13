@@ -1,3 +1,5 @@
+import base64
+import secrets
 from functools import wraps
 
 import click
@@ -6,6 +8,7 @@ from flask import (
     Blueprint,
     abort,
     current_app,
+    flash,
     g,
     redirect,
     render_template,
@@ -16,9 +19,17 @@ from flask import (
 from flask.cli import with_appcontext
 from psycopg.rows import namedtuple_row
 
-from app import validation
+from app import mail, validation
+from app.codes import consume_code, issue_code
 from app.db import get_db
 from app.passwords import SALT_BYTES, hash_password, verify_password
+from app.signing_keys import (
+    decode_public_key,
+    encode_public_key,
+    key_file,
+    read_key_file,
+)
+from gostcrypto.gost3410 import PARAMSET_512_A, generate_keys, sign, verify
 
 bp = Blueprint("auth", __name__)
 
@@ -27,6 +38,8 @@ DUPLICATE_ERRORS = {
     "users_email_key": ("email", "Этот email уже зарегистрирован."),
 }
 LOGIN_FAILED = "Неверный логин или пароль."
+MAX_ATTEMPTS = 5
+TOO_MANY_ATTEMPTS = "Слишком много неудачных попыток. Войдите заново."
 TIMING_DUMMY_SALT = bytes(SALT_BYTES)
 
 
@@ -78,32 +91,40 @@ def register():
             login, email, password, request.form.get("password_confirm", "")
         )
         if not errors:
-            errors = create_user(login, email, password)
+            errors, signing_key = create_user(login, email, password)
         if not errors:
-            return redirect(url_for("auth.registered"))
+            file_content = base64.b64encode(key_file(login, signing_key)).decode()
+            return render_template(
+                "registered.html", login=login, key_file_base64=file_content
+            )
     return render_template(
         "register.html", login=login, email=email, errors=errors, rules=validation
     ), (400 if errors else 200)
 
 
-@bp.get("/register/done")
-def registered():
-    return render_template("registered.html")
-
-
-def create_user(login: str, email: str, password: str) -> dict[str, str]:
+def create_user(
+    login: str, email: str, password: str
+) -> tuple[dict[str, str], int | None]:
     iterations = current_app.config["PASSWORD_ITERATIONS"]
     salt, password_hash = hash_password(password, iterations)
+    signing_key, public_key = generate_keys(PARAMSET_512_A)
     try:
         get_db().execute(
-            "INSERT INTO users (login, email, password_salt, password_iterations, password_hash)"
-            " VALUES (%s, %s, %s, %s, %s)",
-            (login, email, salt, iterations, password_hash),
+            "INSERT INTO users (login, email, password_salt, password_iterations,"
+            " password_hash, signing_public_key) VALUES (%s, %s, %s, %s, %s, %s)",
+            (
+                login,
+                email,
+                salt,
+                iterations,
+                password_hash,
+                encode_public_key(public_key),
+            ),
         )
     except psycopg.errors.UniqueViolation as error:
         field, message = DUPLICATE_ERRORS[error.diag.constraint_name]
-        return {field: message}
-    return {}
+        return {field: message}, None
+    return {}, signing_key
 
 
 @bp.route("/login", methods=["GET", "POST"])
@@ -117,11 +138,101 @@ def login():
         else:
             session.clear()
             session.regenerate()
-            session["user_id"] = user_id
-            return redirect(url_for("auth.account"))
+            session["pending_user_id"] = user_id
+            session["login_step"] = 2
+            session["attempts"] = 0
+            send_login_code(user_id)
+            return redirect(url_for("auth.login_code"))
     return render_template("login.html", login=login, error=error), (
         400 if error else 200
     )
+
+
+def send_login_code(user_id: int) -> None:
+    (email,) = (
+        get_db().execute("SELECT email FROM users WHERE id = %s", (user_id,)).fetchone()
+    )
+    code = issue_code(user_id, "login")
+    mail.send_mail(
+        email,
+        "Код для входа",
+        f"Ваш код для входа: {code}\nКод действует 10 минут и срабатывает один раз.",
+    )
+
+
+def login_step_required(step: int):
+    def decorator(view):
+        @wraps(view)
+        def wrapped(**kwargs):
+            if session.get("login_step") != step:
+                return redirect(url_for("auth.login"))
+            return view(**kwargs)
+
+        return wrapped
+
+    return decorator
+
+
+def count_failed_attempt():
+    session["attempts"] += 1
+    if session["attempts"] < MAX_ATTEMPTS:
+        return None
+    session.clear()
+    flash(TOO_MANY_ATTEMPTS)
+    return redirect(url_for("auth.login"))
+
+
+@bp.route("/login/code", methods=["GET", "POST"])
+@login_step_required(2)
+def login_code():
+    error = None
+    if request.method == "POST":
+        code = request.form.get("code", "").strip()
+        if consume_code(session["pending_user_id"], "login", code):
+            session["login_step"] = 3
+            session["attempts"] = 0
+            session["challenge"] = secrets.token_hex(32)
+            return redirect(url_for("auth.login_key"))
+        error = "Неверный или просроченный код."
+        if (restart := count_failed_attempt()) is not None:
+            return restart
+    return render_template("login_code.html", error=error), (400 if error else 200)
+
+
+@bp.route("/login/key", methods=["GET", "POST"])
+@login_step_required(3)
+def login_key():
+    error = None
+    if request.method == "POST":
+        uploaded = request.files.get("key_file")
+        if uploaded is not None and key_matches(uploaded.read()):
+            user_id = session["pending_user_id"]
+            session.clear()
+            session.regenerate()
+            session["user_id"] = user_id
+            return redirect(url_for("auth.account"))
+        error = "Файл ключа не подходит."
+        if (restart := count_failed_attempt()) is not None:
+            return restart
+    return render_template("login_key.html", error=error), (400 if error else 200)
+
+
+def key_matches(file_content: bytes) -> bool:
+    try:
+        signing_key = read_key_file(file_content)
+    except ValueError:
+        return False
+    (public_key,) = (
+        get_db()
+        .execute(
+            "SELECT signing_public_key FROM users WHERE id = %s",
+            (session["pending_user_id"],),
+        )
+        .fetchone()
+    )
+    challenge = session["challenge"].encode()
+    signature = sign(PARAMSET_512_A, signing_key, challenge)
+    return verify(PARAMSET_512_A, decode_public_key(public_key), challenge, signature)
 
 
 def authenticate(login: str, password: str) -> int | None:

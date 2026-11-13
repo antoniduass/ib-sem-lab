@@ -14,6 +14,10 @@ def create_app(config: dict | None = None) -> Flask:
     app.config["DATABASE_URL"] = os.environ.get("DATABASE_URL")
     app.config["PASSWORD_ITERATIONS"] = PASSWORD_ITERATIONS
     app.config["SESSION_COOKIE_SECURE"] = False
+    app.config["MAIL_SERVER"] = os.environ.get("MAIL_SERVER", "127.0.0.1")
+    app.config["MAIL_PORT"] = int(os.environ.get("MAIL_PORT", "1025"))
+    app.config["MAIL_SENDER"] = "noreply@ib.local"
+    app.config["MAX_CONTENT_LENGTH"] = 64 * 1024
     app.config.update(config or {})
 
     db.init_app(app)

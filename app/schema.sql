@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_salt bytea NOT NULL,
     password_iterations integer NOT NULL,
     password_hash bytea NOT NULL,
+    signing_public_key bytea NOT NULL,
     role text NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
     created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -16,4 +17,13 @@ CREATE TABLE IF NOT EXISTS sessions (
     token_hash bytea PRIMARY KEY,
     data jsonb NOT NULL,
     expires_at timestamptz NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS one_time_codes (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id bigint NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    purpose text NOT NULL CHECK (purpose IN ('login', 'reset')),
+    code_hash bytea NOT NULL,
+    expires_at timestamptz NOT NULL,
+    used_at timestamptz
 );

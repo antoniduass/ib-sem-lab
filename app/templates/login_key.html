@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Вход: файл ключа{% endblock %}
+{% block content %}
+  <h1>Шаг 3 из 3: файл ключа ЭЦП</h1>
+  <p>Загрузите файл ключа, который вы скачали при регистрации. Сервер подпишет им
+    случайную строку по ГОСТ 34.10 и проверит подпись вашим открытым ключом.</p>
+  <form method="post" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Файл ключа
+      <input name="key_file" type="file" required accept=".json,application/json">
+    </label>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    <button>Войти</button>
+  </form>
+{% endblock %}

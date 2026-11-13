@@ -23,8 +23,8 @@ def test_form_uses_server_patterns_on_client(client):
 
 def test_registration_stores_salted_hash_only(submit, query, app):
     response = submit("/register", data=form())
-    assert response.status_code == 302
-    assert response.headers["Location"].endswith("/register/done")
+    assert response.status_code == 200
+    assert "Регистрация завершена" in response.get_data(as_text=True)
     [(login, email, salt, iterations, password_hash, role)] = query(
         "SELECT login, email, password_salt, password_iterations, password_hash, role FROM users"
     )

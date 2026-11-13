@@ -37,6 +37,9 @@
       {% endif %}
     </nav>
   </header>
-  <main>{% block content %}{% endblock %}</main>
+  <main>
+    {% for message in get_flashed_messages() %}<p class="error">{{ message }}</p>{% endfor %}
+    {% block content %}{% endblock %}
+  </main>
 </body>
 </html>
