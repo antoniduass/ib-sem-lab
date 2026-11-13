@@ -23,6 +23,12 @@ from app import mail, validation
 from app.codes import consume_code, issue_code
 from app.db import get_db
 from app.passwords import SALT_BYTES, hash_password, verify_password
+from app.recovery import (
+    consume_recovery_code,
+    issue_recovery_codes,
+    looks_like_recovery_code,
+    remaining_recovery_codes,
+)
 from app.signing_keys import (
     decode_public_key,
     encode_public_key,
@@ -40,6 +46,10 @@ DUPLICATE_ERRORS = {
 LOGIN_FAILED = "Неверный логин или пароль."
 MAX_ATTEMPTS = 5
 TOO_MANY_ATTEMPTS = "Слишком много неудачных попыток. Войдите заново."
+KEY_REJECTED = "Файл ключа не подходит."
+KEY_REISSUE_HINT = (
+    "Вы вошли по коду восстановления. Выпустите новый файл ключа ЭЦП в кабинете."
+)
 TIMING_DUMMY_SALT = bytes(SALT_BYTES)
 
 
@@ -91,40 +101,51 @@ def register():
             login, email, password, request.form.get("password_confirm", "")
         )
         if not errors:
-            errors, signing_key = create_user(login, email, password)
+            errors, user_id, signing_key = create_user(login, email, password)
         if not errors:
-            file_content = base64.b64encode(key_file(login, signing_key)).decode()
             return render_template(
-                "registered.html", login=login, key_file_base64=file_content
+                "registered.html",
+                login=login,
+                key_file_base64=key_file_base64(login, signing_key),
+                recovery_codes=issue_recovery_codes(user_id),
             )
     return render_template(
         "register.html", login=login, email=email, errors=errors, rules=validation
     ), (400 if errors else 200)
 
 
+def key_file_base64(login: str, signing_key: int) -> str:
+    return base64.b64encode(key_file(login, signing_key)).decode()
+
+
 def create_user(
     login: str, email: str, password: str
-) -> tuple[dict[str, str], int | None]:
+) -> tuple[dict[str, str], int | None, int | None]:
     iterations = current_app.config["PASSWORD_ITERATIONS"]
     salt, password_hash = hash_password(password, iterations)
     signing_key, public_key = generate_keys(PARAMSET_512_A)
     try:
-        get_db().execute(
-            "INSERT INTO users (login, email, password_salt, password_iterations,"
-            " password_hash, signing_public_key) VALUES (%s, %s, %s, %s, %s, %s)",
-            (
-                login,
-                email,
-                salt,
-                iterations,
-                password_hash,
-                encode_public_key(public_key),
-            ),
+        (user_id,) = (
+            get_db()
+            .execute(
+                "INSERT INTO users (login, email, password_salt, password_iterations,"
+                " password_hash, signing_public_key) VALUES (%s, %s, %s, %s, %s, %s)"
+                " RETURNING id",
+                (
+                    login,
+                    email,
+                    salt,
+                    iterations,
+                    password_hash,
+                    encode_public_key(public_key),
+                ),
+            )
+            .fetchone()
         )
     except psycopg.errors.UniqueViolation as error:
         field, message = DUPLICATE_ERRORS[error.diag.constraint_name]
-        return {field: message}, None
-    return {}, signing_key
+        return {field: message}, None, None
+    return {}, user_id, signing_key
 
 
 @bp.route("/login", methods=["GET", "POST"])
@@ -188,7 +209,7 @@ def login_code():
     error = None
     if request.method == "POST":
         code = request.form.get("code", "").strip()
-        if consume_code(session["pending_user_id"], "login", code):
+        if consume_login_code(session["pending_user_id"], code):
             session["login_step"] = 3
             session["attempts"] = 0
             session["challenge"] = secrets.token_hex(32)
@@ -199,22 +220,40 @@ def login_code():
     return render_template("login_code.html", error=error), (400 if error else 200)
 
 
+def consume_login_code(user_id: int, code: str) -> bool:
+    if looks_like_recovery_code(code):
+        session["recovery_used"] = consume_recovery_code(user_id, code)
+        return session["recovery_used"]
+    return consume_code(user_id, "login", code)
+
+
 @bp.route("/login/key", methods=["GET", "POST"])
 @login_step_required(3)
 def login_key():
     error = None
     if request.method == "POST":
         uploaded = request.files.get("key_file")
-        if uploaded is not None and key_matches(uploaded.read()):
+        recovery_code = request.form.get("recovery_code", "").strip()
+        if recovery_code:
+            accepted = not session.get("recovery_used") and consume_recovery_code(
+                session["pending_user_id"], recovery_code
+            )
+        else:
+            accepted = uploaded is not None and key_matches(uploaded.read())
+        if accepted:
             user_id = session["pending_user_id"]
             session.clear()
             session.regenerate()
             session["user_id"] = user_id
+            if recovery_code:
+                flash(KEY_REISSUE_HINT)
             return redirect(url_for("auth.account"))
-        error = "Файл ключа не подходит."
+        error = "Код восстановления не подходит." if recovery_code else KEY_REJECTED
         if (restart := count_failed_attempt()) is not None:
             return restart
-    return render_template("login_key.html", error=error), (400 if error else 200)
+    return render_template(
+        "login_key.html", error=error, recovery_allowed=not session.get("recovery_used")
+    ), (400 if error else 200)
 
 
 def key_matches(file_content: bytes) -> bool:
@@ -268,7 +307,30 @@ def logout():
 @bp.get("/account")
 @login_required
 def account():
-    return render_template("account.html")
+    return render_template(
+        "account.html", recovery_codes_left=remaining_recovery_codes(g.user.id)
+    )
+
+
+@bp.post("/account/recovery-codes")
+@login_required
+def new_recovery_codes():
+    return render_template(
+        "recovery_codes.html", recovery_codes=issue_recovery_codes(g.user.id)
+    )
+
+
+@bp.post("/account/signing-key")
+@login_required
+def new_signing_key():
+    signing_key, public_key = generate_keys(PARAMSET_512_A)
+    get_db().execute(
+        "UPDATE users SET signing_public_key = %s WHERE id = %s",
+        (encode_public_key(public_key), g.user.id),
+    )
+    return render_template(
+        "signing_key.html", key_file_base64=key_file_base64(g.user.login, signing_key)
+    )
 
 
 @bp.get("/admin")

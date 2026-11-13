@@ -27,3 +27,10 @@ CREATE TABLE IF NOT EXISTS one_time_codes (
     expires_at timestamptz NOT NULL,
     used_at timestamptz
 );
+
+CREATE TABLE IF NOT EXISTS recovery_codes (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id bigint NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    code_hash bytea NOT NULL,
+    used_at timestamptz
+);

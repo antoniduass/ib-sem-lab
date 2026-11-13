@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Новый файл ключа{% endblock %}
+{% block content %}
+  <h1>Новый файл ключа ЭЦП</h1>
+  <p>Создана новая пара ключей по ГОСТ 34.10. Прежний файл ключа больше не подходит для входа.
+    <strong>Ссылка показывается один раз</strong>: на сервере закрытый ключ не сохраняется.</p>
+  <p><a id="key-file" href="data:application/json;base64,{{ key_file_base64 }}"
+        download="{{ g.user.login }}-signing-key.json">Скачать файл ключа</a></p>
+  <p><a href="{{ url_for('auth.account') }}">В кабинет</a></p>
+{% endblock %}

@@ -6,8 +6,9 @@
   <form method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Код
-      <input name="code" required inputmode="numeric" autocomplete="one-time-code"
-             pattern="[0-9]{6}" maxlength="6">
+      <input name="code" required autocomplete="one-time-code" maxlength="11">
+      <span class="hint">Нет доступа к почте? Введите один из кодов восстановления
+        (вида ABCDE-FGH23) — он заменит код из письма.</span>
     </label>
     {% if error %}<p class="error">{{ error }}</p>{% endif %}
     <button>Продолжить</button>

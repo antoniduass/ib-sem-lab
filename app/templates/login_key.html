@@ -12,4 +12,15 @@
     {% if error %}<p class="error">{{ error }}</p>{% endif %}
     <button>Войти</button>
   </form>
+  {% if recovery_allowed %}
+    <h2>Потеряли файл ключа?</h2>
+    <p>Войдите по коду восстановления, затем выпустите новый файл ключа в кабинете.</p>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Код восстановления
+        <input name="recovery_code" required maxlength="11" autocomplete="off">
+      </label>
+      <button>Войти по коду</button>
+    </form>
+  {% endif %}
 {% endblock %}

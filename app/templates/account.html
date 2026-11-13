@@ -4,4 +4,14 @@
   <h1>Кабинет</h1>
   <p>Логин: <strong>{{ g.user.login }}</strong></p>
   <p>Роль: <strong>{{ "администратор" if g.user.role == "admin" else "пользователь" }}</strong></p>
+  <h2>Безопасность</h2>
+  <p>Осталось кодов восстановления: <strong id="codes-left">{{ recovery_codes_left }}</strong></p>
+  <form method="post" action="{{ url_for('auth.new_recovery_codes') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button>Выпустить новые коды восстановления</button>
+  </form>
+  <form method="post" action="{{ url_for('auth.new_signing_key') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button>Выпустить новый файл ключа ЭЦП</button>
+  </form>
 {% endblock %}

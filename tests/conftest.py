@@ -21,7 +21,9 @@ def app():
     )
     with app.app_context():
         init_db()
-        get_db().execute("TRUNCATE users, sessions, one_time_codes RESTART IDENTITY")
+        get_db().execute(
+            "TRUNCATE users, sessions, one_time_codes, recovery_codes RESTART IDENTITY"
+        )
     return app
 
 
@@ -64,7 +66,12 @@ def key_files():
 
 
 @pytest.fixture
-def register(submit, key_files):
+def recovery_codes():
+    return {}
+
+
+@pytest.fixture
+def register(submit, key_files, recovery_codes):
     def run(login="anton", email=None, password=PASSWORD):
         response = submit(
             "/register",
@@ -79,6 +86,9 @@ def register(submit, key_files):
         page = response.get_data(as_text=True)
         encoded = re.search(r'data:application/json;base64,([^"]+)"', page).group(1)
         key_files[login.lower()] = base64.b64decode(encoded)
+        recovery_codes[login.lower()] = re.findall(
+            r"<code>([A-Z0-9-]{11})</code>", page
+        )
         return key_files[login.lower()]
 
     return run
