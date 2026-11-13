@@ -34,7 +34,7 @@ def app(test_rsa_key):
     with app.app_context():
         init_db()
         get_db().execute(
-            "TRUNCATE users, sessions, one_time_codes, recovery_codes RESTART IDENTITY"
+            "TRUNCATE users, sessions, one_time_codes, recovery_codes, messages RESTART IDENTITY"
         )
     return app
 

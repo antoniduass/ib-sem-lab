@@ -2,7 +2,7 @@ import os
 
 from flask import Flask, render_template
 
-from app import auth, db, reset
+from app import auth, db, messages, reset
 from app.csrf import check_csrf, csrf_token
 from app.sessions import PostgresSessionInterface
 
@@ -28,6 +28,7 @@ def create_app(config: dict | None = None) -> Flask:
     app.jinja_env.globals["csrf_token"] = csrf_token
     app.register_blueprint(auth.bp)
     app.register_blueprint(reset.bp)
+    app.register_blueprint(messages.bp)
     app.cli.add_command(auth.set_role_command)
 
     @app.get("/")

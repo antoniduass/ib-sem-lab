@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Новое сообщение{% endblock %}
+{% block content %}
+  <h1>Новое сообщение</h1>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Текст
+      <textarea name="text" required>{{ text }}</textarea>
+      <span class="hint">Не длиннее {{ max_bytes }} байт. Сообщение будет зашифровано и подписано вашей ЭЦП.</span>
+    </label>
+    <fieldset>
+      <legend>Шифрование</legend>
+      {% for value, name in algorithms.items() %}
+        <label class="hint"><span><input type="radio" name="algorithm" value="{{ value }}"
+          {% if value == algorithm %}checked{% endif %}> {{ name }}</span></label>
+      {% endfor %}
+    </fieldset>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    <button>Зашифровать и сохранить</button>
+  </form>
+{% endblock %}

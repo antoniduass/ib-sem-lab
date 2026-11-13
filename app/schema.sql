@@ -35,3 +35,13 @@ CREATE TABLE IF NOT EXISTS recovery_codes (
     code_hash bytea NOT NULL,
     used_at timestamptz
 );
+
+CREATE TABLE IF NOT EXISTS messages (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id bigint NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    payload bytea NOT NULL,
+    wrapped_key bytea,
+    signature bytea NOT NULL,
+    signer_public_key bytea NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+);

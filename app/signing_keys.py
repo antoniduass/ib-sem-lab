@@ -46,3 +46,15 @@ def read_key_file(data: bytes) -> int:
     if not valid:
         raise ValueError("not a signing key file")
     return signing_key
+
+
+def encode_signature(signature: tuple[int, int]) -> bytes:
+    r, s = signature
+    return r.to_bytes(COORDINATE_BYTES, "big") + s.to_bytes(COORDINATE_BYTES, "big")
+
+
+def decode_signature(data: bytes) -> tuple[int, int]:
+    return (
+        int.from_bytes(data[:COORDINATE_BYTES], "big"),
+        int.from_bytes(data[COORDINATE_BYTES:], "big"),
+    )

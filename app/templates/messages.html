@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Сообщения{% endblock %}
+{% block content %}
+  <h1>Мои сообщения</h1>
+  <p><a href="{{ url_for('messages.new_message') }}">Новое сообщение</a></p>
+  {% if messages %}
+    <table>
+      <tr><th>№</th><th>Создано (UTC)</th><th>Шифрование</th><th></th></tr>
+      {% for message_id, payload in messages %}
+        <tr>
+          <td>{{ message_id }}</td>
+          <td>{{ payload.created_at }}</td>
+          <td>{{ algorithms[payload.algorithm] }}</td>
+          <td>
+            <form class="inline" method="post" action="{{ url_for('messages.decrypt_message', message_id=message_id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="link">Расшифровать</button>
+            </form>
+            · <a href="{{ url_for('messages.message_pdf_download', message_id=message_id) }}">PDF с подписью</a>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+    <p class="hint">Расшифровка RSA-32768 занимает около 30 секунд — это нормально для ключа такой длины.</p>
+  {% else %}
+    <p>Сообщений пока нет.</p>
+  {% endif %}
+{% endblock %}

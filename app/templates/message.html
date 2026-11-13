@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Сообщение № {{ message_id }}{% endblock %}
+{% block content %}
+  <h1>Сообщение № {{ message_id }}</h1>
+  <p>Создано (UTC): {{ payload.created_at }}<br>Шифрование: {{ algorithms[payload.algorithm] }}</p>
+  <pre id="plaintext">{{ plaintext }}</pre>
+  <p><a href="{{ url_for('messages.list_messages') }}">К списку</a></p>
+{% endblock %}

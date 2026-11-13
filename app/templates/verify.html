@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Проверка подписи{% endblock %}
+{% block content %}
+  <h1>Проверка подписи PDF</h1>
+  <p>Загрузите PDF сообщения. Подпись проверяется по ГОСТ 34.10-2018 ключом проверки,
+    который записан в самом файле.</p>
+  <form method="post" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>PDF-файл
+      <input name="pdf_file" type="file" required accept=".pdf,application/pdf">
+    </label>
+    <button>Проверить</button>
+  </form>
+  {% if result %}
+    {% if result.valid %}
+      <p class="ok" id="verdict">Подпись верна.</p>
+      <p>Автор: <strong>{{ result.fields.author }}</strong><br>
+        Создано (UTC): {{ result.fields.created_at }}<br>
+        Шифрование: {{ algorithms.get(result.fields.algorithm, result.fields.algorithm) }}</p>
+      {% if result.key_status == "current" %}
+        <p>Ключ проверки совпадает с текущим ключом пользователя {{ result.fields.author }}.</p>
+      {% elif result.key_status == "replaced" %}
+        <p class="error">Пользователь {{ result.fields.author }} с тех пор выпустил новый ключ: подпись сделана прежним ключом.</p>
+      {% else %}
+        <p class="error">Пользователь {{ result.fields.author }} в системе не найден.</p>
+      {% endif %}
+    {% else %}
+      <p class="error" id="verdict">Подпись неверна или файл повреждён.</p>
+    {% endif %}
+  {% endif %}
+{% endblock %}
