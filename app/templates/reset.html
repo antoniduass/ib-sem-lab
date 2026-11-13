@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Сброс пароля{% endblock %}
+{% block content %}
+  <h1>Сброс пароля</h1>
+  <p>Укажите email, с которым вы регистрировались. Мы отправим на него код для сброса.</p>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Email
+      <input name="email" type="email" required autocomplete="email">
+    </label>
+    <button>Получить код</button>
+  </form>
+{% endblock %}

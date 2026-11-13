@@ -13,4 +13,5 @@
     {% if error %}<p class="error">{{ error }}</p>{% endif %}
     <button>Войти</button>
   </form>
+  <p><a href="{{ url_for('reset.request_reset') }}">Забыли пароль?</a></p>
 {% endblock %}

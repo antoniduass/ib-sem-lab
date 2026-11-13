@@ -26,6 +26,12 @@ def validate_registration(
         errors["login"] = LOGIN_RULE
     if len(email) > EMAIL_MAX_LENGTH or not re.fullmatch(EMAIL_PATTERN, email):
         errors["email"] = EMAIL_RULE
+    errors.update(validate_new_password(password, password_confirm))
+    return errors
+
+
+def validate_new_password(password: str, password_confirm: str) -> dict[str, str]:
+    errors = {}
     if not re.fullmatch(PASSWORD_PATTERN, password):
         errors["password"] = PASSWORD_RULE
     if password != password_confirm:

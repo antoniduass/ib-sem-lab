@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Новый пароль{% endblock %}
+{% block content %}
+  <h1>Новый пароль</h1>
+  <p>Если такой email зарегистрирован, на него отправлен код. Код действует 10 минут.
+    Нет доступа к почте? Введите вместо него один из кодов восстановления.</p>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Код из письма или код восстановления
+      <input name="code" required autocomplete="one-time-code" maxlength="11">
+      {% if errors.code %}<span class="error">{{ errors.code }}</span>{% endif %}
+    </label>
+    <label>Новый пароль
+      <input name="password" type="password" required autocomplete="new-password"
+             pattern="{{ rules.PASSWORD_PATTERN }}">
+      <span class="hint">{{ rules.PASSWORD_RULE }}</span>
+      {% if errors.password %}<span class="error">{{ errors.password }}</span>{% endif %}
+    </label>
+    <label>Повтор пароля
+      <input name="password_confirm" type="password" required autocomplete="new-password">
+      {% if errors.password_confirm %}<span class="error">{{ errors.password_confirm }}</span>{% endif %}
+    </label>
+    <button>Сменить пароль</button>
+  </form>
+{% endblock %}
